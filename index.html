@@ -1,0 +1,1250 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CC Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Calistoga:ital@0;1&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── Design Tokens ─── */
+:root {
+  --bg:       #0F172A;
+  --bg2:      #0A1020;
+  --surface:  #141E33;
+  --surface2: #1C2840;
+  --muted:    #272F42;
+  --border:   #334155;
+  --border2:  #3D4F6B;
+  --text:     #F8FAFC;
+  --text2:    #94A3B8;
+  --text3:    #475569;
+  --gold:     #F59E0B;
+  --gold-l:   #FCD34D;
+  --purple:   #8B5CF6;
+  --purple-l: #A78BFA;
+  --green:    #10B981;
+  --green-l:  #34D399;
+  --red:      #EF4444;
+  --red-l:    #FCA5A5;
+  --cyan:     #06B6D4;
+  --sans:     'Inter', sans-serif;
+  --display:  'Calistoga', serif;
+  --mono:     'JetBrains Mono', monospace;
+  --r:        10px;
+  --r-sm:     6px;
+  --r-lg:     14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--sans);background:var(--bg2);color:var(--text);font-size:14px;line-height:1.5;min-height:100vh;-webkit-font-smoothing:antialiased}
+
+/* ── Layout ─── */
+.app{display:flex;min-height:100vh}
+.sidebar{width:220px;background:var(--bg);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:50}
+.content{margin-left:220px;flex:1;min-height:100vh}
+.page{padding:32px 36px;max-width:1080px}
+
+/* ── Sidebar ─── */
+.sb-brand{padding:20px 18px 16px;border-bottom:1px solid var(--border)}
+.sb-logo{display:flex;align-items:center;gap:10px}
+.sb-logo-mark{width:32px;height:32px;background:var(--gold);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sb-logo-mark svg{width:17px;height:17px;fill:none;stroke:#000;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.sb-logo-text{font-family:var(--display);font-size:16px;color:var(--text)}
+.sb-logo-version{font-size:10px;color:var(--text3);font-family:var(--mono);margin-top:1px}
+.sb-nav{padding:10px 10px;flex:1}
+.sb-section{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:1px;padding:8px 8px 4px}
+.nav-btn{display:flex;align-items:center;gap:9px;padding:8px 10px;font-size:13px;font-weight:500;cursor:pointer;color:var(--text2);border-radius:var(--r-sm);transition:all 150ms ease;border:none;background:none;width:100%;text-align:left;font-family:var(--sans)}
+.nav-btn:hover{background:var(--surface2);color:var(--text)}
+.nav-btn.active{background:var(--muted);color:var(--gold);border:1px solid var(--border)}
+.nav-btn svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.sb-footer{padding:12px 14px;border-top:1px solid var(--border)}
+.status-pill{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text3);font-family:var(--mono)}
+.status-dot{width:6px;height:6px;border-radius:50%;background:var(--text3)}
+.status-dot.ok{background:var(--green);box-shadow:0 0 6px rgba(16,185,129,.5)}
+.status-dot.loading{background:var(--gold);animation:pulse 1s infinite}
+.status-dot.err{background:var(--red)}
+
+/* ── Top bar ─── */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 36px;border-bottom:1px solid var(--border);background:var(--bg);position:sticky;top:0;z-index:40}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.topbar-title{font-family:var(--display);font-size:18px;color:var(--text)}
+.topbar-sub{font-size:12px;color:var(--text3)}
+.topbar-right{display:flex;gap:8px}
+
+/* ── Buttons ─── */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:8px 16px;border-radius:var(--r-sm);font-size:13px;font-weight:500;font-family:var(--sans);cursor:pointer;transition:all 150ms ease;border:1px solid var(--border);background:var(--surface);color:var(--text2)}
+.btn:hover{background:var(--surface2);color:var(--text);border-color:var(--border2)}
+.btn-gold{background:var(--gold);color:#0F172A;border-color:var(--gold);font-weight:600}
+.btn-gold:hover{background:var(--gold-l);border-color:var(--gold-l);color:#0F172A}
+.btn-sm{padding:6px 12px;font-size:12px}
+.btn svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ── Loading / Error State ─── */
+.loading-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:16px}
+.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite}
+.loading-text{font-size:13px;color:var(--text3)}
+.error-box{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:var(--r);padding:20px;text-align:center;max-width:400px;margin:40px auto}
+.error-box h3{color:var(--red-l);font-size:14px;margin-bottom:8px}
+.error-box p{color:var(--text2);font-size:13px;line-height:1.6}
+
+/* ── Stats ─── */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:18px 20px;transition:border-color 150ms}
+.stat-card:hover{border-color:var(--border2)}
+.stat-label{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px}
+.stat-value{font-family:var(--mono);font-size:26px;font-weight:500;line-height:1;letter-spacing:-1px}
+.stat-sub{font-size:11px;color:var(--text3);margin-top:7px;font-family:var(--mono)}
+.sv-gold{color:var(--gold)}.sv-purple{color:var(--purple-l)}.sv-green{color:var(--green-l)}.sv-red{color:var(--red-l)}
+
+/* ── Month tabs ─── */
+.month-nav{display:flex;align-items:center;gap:6px;margin-bottom:22px;overflow-x:auto;padding-bottom:4px}
+.month-nav::-webkit-scrollbar{height:3px}
+.month-nav::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px}
+.month-arrow{width:28px;height:28px;border:1px solid var(--border);background:var(--surface);border-radius:var(--r-sm);cursor:pointer;color:var(--text2);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;transition:all 150ms}
+.month-arrow:hover{border-color:var(--border2);color:var(--text)}
+.month-tab{padding:5px 14px;border-radius:var(--r-sm);font-size:12px;font-weight:500;cursor:pointer;border:1px solid transparent;background:none;color:var(--text3);font-family:var(--sans);transition:all 150ms;white-space:nowrap}
+.month-tab:hover{color:var(--text2);background:var(--surface)}
+.month-tab.active{background:var(--gold);color:#0F172A;font-weight:600}
+
+/* ── Panel ─── */
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;margin-bottom:20px}
+.panel-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)}
+.panel-title{font-size:13px;font-weight:600;color:var(--text)}
+.panel-actions{display:flex;gap:8px}
+
+/* ── Table ─── */
+table{width:100%;border-collapse:collapse}
+thead{background:var(--bg2)}
+th{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.7px;padding:10px 16px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none;transition:color 150ms}
+th:hover{color:var(--text2)}
+th.sort-active{color:var(--gold)}
+td{padding:12px 16px;border-bottom:1px solid var(--border);vertical-align:middle;transition:background 100ms}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:rgba(255,255,255,.02)}
+.paid-row td{opacity:.4}
+.paid-row:hover td{opacity:.6}
+.card-name{font-weight:500;font-size:13px}
+.day-chip{font-family:var(--mono);font-size:11px;background:var(--muted);border:1px solid var(--border);border-radius:5px;padding:2px 8px;color:var(--text2);display:inline-block}
+.day-chip.empty{color:var(--text3);border-color:var(--border)}
+.next-month-tag{display:inline-block;font-size:10px;font-weight:600;font-family:var(--mono);background:rgba(139,92,246,.15);color:var(--purple-l);border:1px solid rgba(139,92,246,.3);border-radius:99px;padding:1px 7px;margin-left:5px}
+
+/* ── Amount input ─── */
+.amt-wrap{position:relative;display:inline-flex;align-items:center}
+.amt-prefix{position:absolute;left:9px;font-family:var(--mono);font-size:11px;color:var(--text3);pointer-events:none}
+.amt-input{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-family:var(--mono);font-size:13px;padding:6px 8px 6px 22px;width:120px;text-align:right;transition:all 150ms}
+.amt-input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 2px rgba(245,158,11,.15)}
+
+/* ── Badges ─── */
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;font-family:var(--mono);padding:3px 9px;border-radius:99px;white-space:nowrap}
+.bdot{width:5px;height:5px;border-radius:50%;background:currentColor;flex-shrink:0}
+.b-ok{background:rgba(16,185,129,.1);color:var(--green-l);border:1px solid rgba(16,185,129,.2)}
+.b-soon{background:rgba(245,158,11,.1);color:var(--gold-l);border:1px solid rgba(245,158,11,.2)}
+.b-due{background:rgba(239,68,68,.1);color:var(--red-l);border:1px solid rgba(239,68,68,.2)}
+.b-paid{background:rgba(139,92,246,.1);color:var(--purple-l);border:1px solid rgba(139,92,246,.2)}
+.b-na{background:var(--muted);color:var(--text3);border:1px solid var(--border)}
+.b-unfilled{background:rgba(245,158,11,.06);color:var(--gold-l);border:1px dashed rgba(245,158,11,.4)}
+
+/* ── Row actions ─── */
+.row-acts{display:flex;gap:5px;align-items:center;justify-content:flex-end}
+.pay-btn{padding:4px 11px;border-radius:99px;font-size:11px;font-weight:600;font-family:var(--sans);cursor:pointer;border:1px solid var(--border);background:none;color:var(--text3);transition:all 150ms;white-space:nowrap}
+.pay-btn:hover{border-color:var(--green);color:var(--green-l)}
+.pay-btn.done{background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.3);color:var(--green-l)}
+.pay-btn.noamt-done{background:rgba(100,116,139,.15);border-color:rgba(100,116,139,.35);color:var(--text2)}
+.icon-btn{width:27px;height:27px;border-radius:var(--r-sm);border:1px solid var(--border);background:none;cursor:pointer;color:var(--text3);display:flex;align-items:center;justify-content:center;transition:all 150ms}
+.icon-btn:hover{border-color:var(--border2);color:var(--text);background:var(--surface2)}
+.icon-btn.del:hover{border-color:rgba(239,68,68,.4);color:var(--red-l);background:rgba(239,68,68,.08)}
+.icon-btn svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.total-row td{background:var(--bg2);font-family:var(--mono);font-weight:600;border-top:1px solid var(--border2)}
+
+/* ── Log ─── */
+.log-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.log-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;transition:border-color 150ms}
+.log-card:hover{border-color:var(--border2)}
+.log-head{padding:12px 16px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:8px}
+.log-month{font-family:var(--display);font-size:14px}
+.log-head-right{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+.log-total{font-family:var(--mono);font-size:14px;font-weight:500;color:var(--gold)}
+.log-compare{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:600;font-family:var(--mono);padding:1px 7px;border-radius:99px;white-space:nowrap}
+.lc-up{background:rgba(239,68,68,.1);color:var(--red-l);border:1px solid rgba(239,68,68,.2)}
+.lc-down{background:rgba(16,185,129,.1);color:var(--green-l);border:1px solid rgba(16,185,129,.2)}
+.lc-same{background:var(--muted);color:var(--text3);border:1px solid var(--border)}
+.log-row{display:flex;justify-content:space-between;align-items:center;padding:8px 16px;font-size:12px;border-bottom:1px solid var(--border);transition:background 100ms}
+.log-row:last-child{border-bottom:none}
+.log-row:hover{background:rgba(255,255,255,.02)}
+.log-amt-wrap{display:flex;align-items:center;gap:7px}
+.log-amt{font-family:var(--mono);font-weight:500}
+.log-amt.paid{color:var(--green-l)}.log-amt.unpaid{color:var(--text3)}
+.log-card-compare{font-size:10px;font-family:var(--mono);font-weight:600;white-space:nowrap}
+.lcc-up{color:var(--red-l)}
+.lcc-down{color:var(--green-l)}
+.lcc-same{color:var(--text3)}
+.lcc-new{color:var(--purple-l)}
+
+/* ── Yearly ─── */
+.bar-chart{display:flex;align-items:flex-end;gap:8px;height:160px;padding:0 4px}
+.bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;position:relative}
+.bar-col:hover .bar-fill{opacity:.8}
+.bar-col:hover .bar-tooltip{opacity:1}
+.bar-fill{width:100%;border-radius:4px 4px 0 0;transition:height .5s cubic-bezier(.4,0,.2,1),opacity 150ms;min-height:2px}
+.bar-tooltip{position:absolute;top:-22px;left:50%;transform:translateX(-50%);font-size:9px;font-family:var(--mono);color:var(--text2);white-space:nowrap;opacity:0;transition:opacity 150ms;pointer-events:none}
+.bar-label{font-size:9px;color:var(--text3);font-family:var(--mono)}
+.yr-card-row{display:flex;align-items:center;padding:10px 18px;border-bottom:1px solid var(--border);transition:background 100ms;gap:14px}
+.yr-card-row:last-child{border-bottom:none}
+.yr-card-row:hover{background:rgba(255,255,255,.02)}
+.yr-card-name{font-size:13px;font-weight:500;min-width:180px}
+.yr-bar-wrap{flex:1;height:5px;background:var(--muted);border-radius:99px;overflow:hidden}
+.yr-bar-fill{height:100%;border-radius:99px;background:var(--gold);transition:width .6s cubic-bezier(.4,0,.2,1)}
+.yr-card-amt{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--gold);min-width:90px;text-align:right}
+
+/* ── Settings ─── */
+.settings-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:22px;margin-bottom:14px}
+.settings-card h3{font-size:13px;font-weight:600;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.settings-card h3 svg{width:15px;height:15px;fill:none;stroke:var(--gold);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field{display:flex;flex-direction:column;gap:5px}
+.field.full{grid-column:1/-1}
+.field label{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.7px}
+.field input,.field select{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-family:var(--sans);font-size:13px;padding:9px 12px;transition:all 150ms}
+.field input:focus,.field select:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 2px rgba(245,158,11,.12)}
+.field input[disabled]{opacity:.3;cursor:not-allowed}
+.field-hint{font-size:11px;color:var(--text3);line-height:1.5}
+.field-hint a{color:var(--gold);text-decoration:none}
+.sc-actions{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap}
+.status-msg{margin-top:10px;padding:9px 12px;border-radius:var(--r-sm);font-size:12px;font-weight:500;display:none;border:1px solid}
+.sm-ok{background:rgba(16,185,129,.08);color:var(--green-l);border-color:rgba(16,185,129,.2)}
+.sm-err{background:rgba(239,68,68,.08);color:var(--red-l);border-color:rgba(239,68,68,.2)}
+.sm-info{background:rgba(245,158,11,.08);color:var(--gold-l);border-color:rgba(245,158,11,.2)}
+
+/* ── Modal ─── */
+.overlay{position:fixed;inset:0;background:rgba(2,6,23,.8);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;z-index:200;opacity:0;pointer-events:none;transition:opacity 200ms}
+.overlay.show{opacity:1;pointer-events:all}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:var(--r-lg);width:380px;box-shadow:0 24px 64px rgba(0,0,0,.6);transform:scale(.96) translateY(12px);transition:transform 200ms ease}
+.overlay.show .modal{transform:scale(1) translateY(0)}
+.modal-head{padding:18px 20px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.modal-head h2{font-family:var(--display);font-size:16px}
+.modal-close{background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:6px;transition:all 150ms}
+.modal-close:hover{background:var(--surface2);color:var(--text)}
+.modal-body{padding:18px 20px}
+.mfield{margin-bottom:13px}
+.mfield label{display:block;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px}
+.mfield input{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-family:var(--sans);font-size:13px;padding:9px 12px;transition:all 150ms}
+.mfield input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 2px rgba(245,158,11,.12)}
+.mfield-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.modal-foot{display:flex;gap:8px;justify-content:flex-end;padding:14px 20px;border-top:1px solid var(--border)}
+
+/* ── Toast ─── */
+.toast-wrap{position:fixed;bottom:22px;right:22px;display:flex;flex-direction:column;gap:8px;z-index:999}
+.toast{padding:10px 15px;border-radius:var(--r-sm);font-size:13px;font-weight:500;box-shadow:0 8px 32px rgba(0,0,0,.5);animation:slideIn .2s ease;border:1px solid}
+.toast.info{background:var(--surface);color:var(--text);border-color:var(--border2)}
+.toast.ok{background:rgba(16,185,129,.15);color:var(--green-l);border-color:rgba(16,185,129,.3)}
+.toast.err{background:rgba(239,68,68,.15);color:var(--red-l);border-color:rgba(239,68,68,.3)}
+
+/* ── Manage list ─── */
+.card-manage-item{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
+.card-manage-item:last-child{border-bottom:none}
+.cmi-name{font-size:13px;font-weight:500}
+.cmi-meta{font-size:11px;color:var(--text3);font-family:var(--mono)}
+.cmi-actions{display:flex;gap:6px}
+
+/* ── Empty ─── */
+.empty-state{text-align:center;padding:48px 20px;color:var(--text3)}
+.empty-state svg{width:36px;height:36px;margin:0 auto 12px;stroke:var(--text3);fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;display:block}
+.empty-state p{font-size:13px}
+
+/* ── Mobile Bottom Nav ─── */
+.mob-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--bg);border-top:1px solid var(--border);padding:8px 0 max(8px,env(safe-area-inset-bottom));grid-template-columns:repeat(4,1fr);z-index:100}
+.mob-nav-btn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 4px;cursor:pointer;color:var(--text3);border:none;background:none;font-family:var(--sans);transition:color 150ms}
+.mob-nav-btn.active{color:var(--gold)}
+.mob-nav-btn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.mob-nav-btn span{font-size:10px;font-weight:500}
+.mob-topbar{display:none;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:40}
+.mob-title{font-family:var(--display);font-size:16px}
+.mob-actions{display:flex;gap:6px}
+.mob-btn{width:32px;height:32px;border-radius:var(--r-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text2);display:flex;align-items:center;justify-content:center;transition:all 150ms}
+.mob-btn.primary{background:var(--gold);border-color:var(--gold);color:#0F172A}
+.mob-btn svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ── Mobile card list ─── */
+.mob-cards{display:none;flex-direction:column}
+.mob-card-item{padding:14px 16px;border-bottom:1px solid var(--border);transition:background 100ms}
+.mob-card-item:last-child{border-bottom:none}
+.mob-card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.mob-card-name{font-weight:600;font-size:14px;flex:1;padding-right:8px}
+.mob-card-chips{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.mob-card-bottom{display:flex;gap:8px;align-items:center}
+.mob-amt{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-family:var(--mono);font-size:14px;padding:9px 12px;text-align:right;transition:all 150ms;-webkit-appearance:none}
+.mob-amt:focus{outline:none;border-color:var(--gold)}
+.mob-pay-btn{padding:9px 14px;border-radius:var(--r-sm);font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:none;color:var(--text3);transition:all 150ms;font-family:var(--sans);white-space:nowrap}
+.mob-pay-btn.done{background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.3);color:var(--green-l)}
+.mob-pay-btn.noamt-done{background:rgba(100,116,139,.15);border-color:rgba(100,116,139,.35);color:var(--text2)}
+
+/* ── Misc ─── */
+.pg{display:none}.pg.active{display:block}
+@keyframes slideIn{from{opacity:0;transform:translateX(12px)}to{opacity:1;transform:translateX(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px}
+
+@media(max-width:768px){
+  .sidebar,.topbar{display:none}
+  .content{margin-left:0}
+  .page{padding:0 0 80px}
+  .stats-grid{grid-template-columns:1fr 1fr;gap:10px;padding:14px}
+  .stat-card{padding:14px}
+  .stat-value{font-size:20px}
+  .month-nav{padding:10px 14px 6px}
+  .panel{border-radius:0;border-left:none;border-right:none;margin-bottom:0}
+  .panel + .panel{border-top:none}
+  table,.panel-header .panel-actions{display:none}
+  .mob-nav{display:grid}
+  .mob-topbar{display:flex}
+  .mob-cards{display:flex}
+  .log-grid{grid-template-columns:1fr;gap:0}
+  .log-card{border-radius:0;border-left:none;border-right:none;border-top:none}
+  .form-grid{grid-template-columns:1fr}
+  .settings-card{border-radius:0;border-left:none;border-right:none;margin-bottom:0;border-top:none}
+  .modal{width:calc(100vw - 24px)}
+  .toast-wrap{bottom:86px;right:12px;left:12px}
+  .bar-chart{height:120px}
+}
+</style>
+</head>
+<body>
+
+<!-- Mobile topbar -->
+<div class="mob-topbar" id="mob-topbar">
+  <span class="mob-title" id="mob-title">แดชบอร์ด</span>
+  <div class="mob-actions">
+    <button class="mob-btn" onclick="loadData()" title="รีโหลด" id="mob-reload-btn">
+      <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+    </button>
+    <button class="mob-btn primary" onclick="openAdd()">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </button>
+  </div>
+</div>
+
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sb-brand">
+      <div class="sb-logo">
+        <div class="sb-logo-mark">
+          <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><line x1="6" y1="15" x2="10" y2="15"/></svg>
+        </div>
+        <div>
+          <div class="sb-logo-text">CC Tracker</div>
+          <div class="sb-logo-version">v3.3</div>
+        </div>
+      </div>
+    </div>
+    <nav class="sb-nav">
+      <div class="sb-section">Main</div>
+      <button class="nav-btn active" data-page="dashboard" onclick="showPage('dashboard')">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        แดชบอร์ด
+      </button>
+      <button class="nav-btn" data-page="log" onclick="showPage('log')">
+        <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        ประวัติรายเดือน
+      </button>
+      <button class="nav-btn" data-page="yearly" onclick="showPage('yearly')">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        ยอดรวมปี
+      </button>
+      <div class="sb-section" style="margin-top:8px">System</div>
+      <button class="nav-btn" data-page="settings" onclick="showPage('settings')">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        ตั้งค่า
+      </button>
+    </nav>
+    <div class="sb-footer">
+      <div class="status-pill">
+        <div class="status-dot" id="status-dot"></div>
+        <span id="status-text">กำลังโหลด...</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <div class="content">
+    <!-- Top bar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <div>
+          <div class="topbar-title" id="page-title">แดชบอร์ด</div>
+          <div class="topbar-sub" id="page-sub">กำลังโหลดข้อมูล...</div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <button class="btn btn-sm" onclick="loadData()">
+          <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          รีโหลด
+        </button>
+        <button class="btn btn-gold btn-sm" onclick="openAdd()">
+          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          เพิ่มบัตร
+        </button>
+      </div>
+    </header>
+
+    <!-- DASHBOARD -->
+    <div id="pg-dashboard" class="pg active">
+      <div class="page">
+        <div class="month-nav">
+          <button class="month-arrow" onclick="prevMonth()">‹</button>
+          <div id="month-tabs" style="display:flex;gap:4px;flex:1;overflow-x:auto"></div>
+          <button class="month-arrow" onclick="nextMonth()">›</button>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-label">บัตรทั้งหมด</div><div class="stat-value sv-gold" id="s-count">—</div><div class="stat-sub">ใบ</div></div>
+          <div class="stat-card"><div class="stat-label">ยอดรวมเดือนนี้</div><div class="stat-value sv-purple" id="s-total">—</div><div class="stat-sub" id="s-total-sub">—</div></div>
+          <div class="stat-card"><div class="stat-label">จ่ายแล้ว</div><div class="stat-value sv-green" id="s-paid">—</div><div class="stat-sub" id="s-paid-sub">—</div></div>
+          <div class="stat-card"><div class="stat-label">ค้างชำระ</div><div class="stat-value sv-red" id="s-pending">—</div><div class="stat-sub" id="s-pending-sub">—</div></div>
+        </div>
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title" id="table-label">รายการบัตรเครดิต</span>
+            <div class="panel-actions">
+              <button class="btn btn-sm" onclick="testLine()">
+                <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                ทดสอบ LINE
+              </button>
+            </div>
+          </div>
+          <div id="desktop-table"></div>
+          <div class="mob-cards" id="mob-cards"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LOG -->
+    <div id="pg-log" class="pg">
+      <div class="page">
+        <div class="panel" style="margin-bottom:0">
+          <div class="panel-header"><span class="panel-title">ประวัติรายเดือน</span></div>
+        </div>
+        <div style="padding:20px 0" id="log-content"></div>
+      </div>
+    </div>
+
+    <!-- YEARLY -->
+    <div id="pg-yearly" class="pg">
+      <div class="page">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+          <select id="yr-select" class="btn btn-sm" style="cursor:pointer" onchange="renderYearly()"></select>
+        </div>
+        <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px">
+          <div class="stat-card"><div class="stat-label">ยอดรวมทั้งปี</div><div class="stat-value sv-gold" id="yr-total">—</div><div class="stat-sub" id="yr-avg">—</div></div>
+          <div class="stat-card"><div class="stat-label">เดือนสูงสุด</div><div class="stat-value sv-purple" id="yr-max">—</div><div class="stat-sub" id="yr-max-mon">—</div></div>
+          <div class="stat-card"><div class="stat-label">เดือนต่ำสุด</div><div class="stat-value sv-green" id="yr-min">—</div><div class="stat-sub" id="yr-min-mon">—</div></div>
+        </div>
+        <div class="panel" style="margin-bottom:16px">
+          <div class="panel-header"><span class="panel-title">ยอดใช้จ่ายรายเดือน</span></div>
+          <div style="padding:24px 20px 16px" id="yr-chart"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">สรุปแต่ละบัตร</span></div>
+          <div id="yr-cards"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div id="pg-settings" class="pg">
+      <div class="page">
+        <div class="settings-card">
+          <h3><svg viewBox="0 0 24 24"><path d="M14.5 10c-.83 0-1.5-.67-1.5-1.5v-5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5z"/><path d="M20.5 10H19V8.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/><path d="M9.5 14c.83 0 1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5S8 21.33 8 20.5v-5c0-.83.67-1.5 1.5-1.5z"/><path d="M3.5 14H5v1.5c0 .83-.67 1.5-1.5 1.5S2 16.33 2 15.5 2.67 14 3.5 14z"/><path d="M14 14.5c0-.83.67-1.5 1.5-1.5h5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5h-5c-.83 0-1.5-.67-1.5-1.5z"/><path d="M15.5 19H14v1.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5-.67-1.5-1.5-1.5z"/><path d="M10 9.5C10 8.67 9.33 8 8.5 8h-5C2.67 8 2 8.67 2 9.5S2.67 11 3.5 11h5c.83 0 1.5-.67 1.5-1.5z"/><path d="M8.5 5H10V3.5C10 2.67 9.33 2 8.5 2S7 2.67 7 3.5 7.67 5 8.5 5z"/></svg>Google Sheets (Apps Script)</h3>
+          <div class="form-grid">
+            <div class="field full">
+              <label>Web App URL</label>
+              <input type="url" id="cfg-gas" placeholder="https://script.google.com/macros/s/…/exec">
+              <span class="field-hint">Deploy Code.gs → Web App (Anyone) → Copy URL มาวาง</span>
+            </div>
+          </div>
+          <div class="sc-actions">
+            <button class="btn btn-gold btn-sm" onclick="saveGas()">บันทึก</button>
+            <button class="btn btn-sm" onclick="testGas()">ทดสอบ</button>
+          </div>
+          <div class="status-msg" id="gas-msg"></div>
+        </div>
+
+        <div class="settings-card">
+          <h3><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>LINE Messaging API</h3>
+          <div class="form-grid">
+            <div class="field full">
+              <label>Channel Access Token</label>
+              <input type="password" id="cfg-token" placeholder="Long-lived token จาก LINE Developers Console">
+              <span class="field-hint"><a href="https://developers.line.biz/console/" target="_blank">developers.line.biz</a> → CC Tracker → Messaging API → Issue</span>
+            </div>
+            <div class="field full">
+              <label>LINE User ID</label>
+              <input type="text" id="cfg-uid" placeholder="Uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx">
+              <span class="field-hint">Add Bot <b>@132sxadr</b> → ส่งข้อความ → รัน getMyUserId() ใน Apps Script</span>
+            </div>
+            <div class="field">
+              <label>แจ้งเตือนล่วงหน้า (วัน)</label>
+              <input type="number" id="cfg-days" value="3" min="1" max="14">
+            </div>
+            <div class="field">
+              <label>เวลาแจ้งเตือนรายวัน</label>
+              <select id="cfg-notify-hour">
+                <option value="6">06:00 น.</option><option value="7">07:00 น.</option>
+                <option value="8" selected>08:00 น.</option><option value="9">09:00 น.</option>
+                <option value="10">10:00 น.</option><option value="12">12:00 น.</option>
+                <option value="18">18:00 น.</option><option value="20">20:00 น.</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>เวลาส่งสรุปรายเดือน</label>
+              <select id="cfg-summary-hour">
+                <option value="7">07:00 น.</option><option value="8">08:00 น.</option>
+                <option value="9" selected>09:00 น.</option><option value="10">10:00 น.</option>
+                <option value="12">12:00 น.</option><option value="18">18:00 น.</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>อัปเดต Trigger</label>
+              <button class="btn btn-sm" onclick="updateTriggers()" style="justify-content:center">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                บันทึกเวลาและอัปเดต Trigger
+              </button>
+            </div>
+          </div>
+          <div class="sc-actions">
+            <button class="btn btn-gold btn-sm" onclick="saveLine()">บันทึก</button>
+            <button class="btn btn-sm" onclick="testLine()">ทดสอบส่ง LINE</button>
+            <button class="btn btn-sm" onclick="sendMonthlySummaryNow()" style="color:var(--purple-l);border-color:rgba(139,92,246,.3)">ส่งสรุปรายเดือน</button>
+          </div>
+          <div class="status-msg" id="line-msg"></div>
+        </div>
+
+        <div class="settings-card">
+          <h3><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><line x1="6" y1="15" x2="10" y2="15"/></svg>จัดการบัตร</h3>
+          <div id="manage-cards"></div>
+          <div style="margin-top:12px">
+            <button class="btn btn-sm" onclick="openAdd()">
+              <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              เพิ่มบัตรใหม่
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Mobile bottom nav -->
+<nav class="mob-nav">
+  <button class="mob-nav-btn active" data-page="dashboard" onclick="showPage('dashboard')">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+    <span>หน้าหลัก</span>
+  </button>
+  <button class="mob-nav-btn" data-page="log" onclick="showPage('log')">
+    <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    <span>ประวัติ</span>
+  </button>
+  <button class="mob-nav-btn" data-page="yearly" onclick="showPage('yearly')">
+    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    <span>ยอดปี</span>
+  </button>
+  <button class="mob-nav-btn" data-page="settings" onclick="showPage('settings')">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    <span>ตั้งค่า</span>
+  </button>
+</nav>
+
+<!-- Modal -->
+<div class="overlay" id="overlay" onclick="onOverlayClick(event)">
+  <div class="modal">
+    <div class="modal-head"><h2 id="modal-title">เพิ่มบัตรใหม่</h2><button class="modal-close" onclick="closeModal()">×</button></div>
+    <div class="modal-body">
+      <div class="mfield"><label>ชื่อบัตร *</label><input id="m-name" type="text" placeholder="เช่น KBANK Titanium"></div>
+      <div class="mfield mfield-row">
+        <div><label style="display:block;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px">วันสรุปรอบ</label><input id="m-cycle" type="number" min="1" max="31" placeholder="1–31"></div>
+        <div><label style="display:block;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px">วันครบกำหนดชำระ</label><input id="m-pay" type="number" min="1" max="31" placeholder="1–31"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-sm" onclick="closeModal()">ยกเลิก</button>
+      <button class="btn btn-gold btn-sm" onclick="saveCard()">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toasts"></div>
+
+<script>
+// ── Config ──────────────────────────────────────────────────
+const DEFAULT_GAS = 'https://script.google.com/macros/s/AKfycbwY2AAX0p2sKSypbv8Hry7fSXmVWorG7nIByDclygpawn9U-sSg61Ek9UEVhlVj1YgD/exec';
+const CFG_KEY = 'cct_cfg_v3';
+
+let cfg = {
+  gasUrl: DEFAULT_GAS,
+  lineToken: '',
+  lineUserId: 'U7fbff5244b0dd63203557219613a3d52',
+  notifyDays: 3,
+  notifyHour: 8,
+  summaryHour: 9
+};
+
+// ── State ────────────────────────────────────────────────────
+let cards = [], log = {}, editId = null;
+const now = new Date(), CY = now.getFullYear(), CM = now.getMonth() + 1;
+let vY = CY, vM = CM;
+let sortCol = 'default', sortDir = 1;
+
+const mk = () => `${vY}-${String(vM).padStart(2,'0')}`;
+const fmt = n => Number(n||0).toLocaleString('th-TH');
+const thM = (y,m) => new Date(y,m-1,1).toLocaleDateString('th-TH',{month:'long',year:'numeric'});
+const THAI_SHORT = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+
+// ── Load config from localStorage ────────────────────────────
+function loadCfg() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(CFG_KEY) || '{}');
+    cfg = { ...cfg, ...saved };
+    if (!cfg.gasUrl) cfg.gasUrl = DEFAULT_GAS;
+  } catch(e) {}
+}
+function saveCfg() {
+  localStorage.setItem(CFG_KEY, JSON.stringify(cfg));
+}
+
+// ── JSONP GAS calls ──────────────────────────────────────────
+function gasCall(url) {
+  return new Promise((resolve, reject) => {
+    const cb = '_cb' + Date.now() + Math.random().toString(36).slice(2);
+    const s = document.createElement('script');
+    let done = false;
+    window[cb] = (data) => {
+      done = true; delete window[cb];
+      try { document.body.removeChild(s); } catch(e) {}
+      if (data && data.error) reject(new Error(data.error));
+      else resolve(data);
+    };
+    s.onerror = () => { if (!done) { done = true; delete window[cb]; try { document.body.removeChild(s); } catch(e) {} reject(new Error('Network error')); }};
+    setTimeout(() => { if (!done) { done = true; delete window[cb]; try { document.body.removeChild(s); } catch(e) {} reject(new Error('Timeout')); }}, 20000);
+    s.src = url + '&callback=' + cb;
+    document.body.appendChild(s);
+  });
+}
+const gasGet = (action, extra='') => gasCall(`${cfg.gasUrl}?action=${action}${extra}`);
+const gasPost = body => gasCall(`${cfg.gasUrl}?payload=${encodeURIComponent(JSON.stringify(body))}`);
+
+// ── Pick a sensible default month on load ──────────────────────
+// ถ้าเดือนปฏิทินปัจจุบันยังไม่มีใครกรอกยอดเลย แต่มีเดือนก่อนหน้าที่ยังค้างจ่ายอยู่
+// ให้ auto-jump ไปโชว์เดือนนั้นแทน จะได้เจอปุ่ม "จ่ายแล้ว" ทันทีโดยไม่ต้องเลื่อนหาเอง
+function pickDefaultMonth() {
+  const curKey = `${CY}-${String(CM).padStart(2,'0')}`;
+  const curHasData = log[curKey] && Object.values(log[curKey]).some(e => parseFloat(e.amount) > 0);
+  if (curHasData) return; // เดือนนี้มีข้อมูลแล้ว ไม่ต้องย้าย
+  const pastMonths = Object.keys(log).filter(k => k < curKey).sort().reverse();
+  for (const k of pastMonths) {
+    const hasUnpaid = Object.values(log[k]).some(e => parseFloat(e.amount) > 0 && !e.paid);
+    if (hasUnpaid) {
+      const [y, m] = k.split('-').map(Number);
+      vY = y; vM = m;
+      toast(`📌 แสดงยอด ${THAI_SHORT[m-1]} ${y} ที่ยังไม่จ่าย`, 'info');
+      return;
+    }
+  }
+}
+
+// ── Load all data from Sheets ────────────────────────────────
+async function loadData() {
+  setStatus('loading', 'กำลังโหลด...');
+  updatePageSub('กำลังโหลดข้อมูลจาก Google Sheets...');
+  try {
+    const [remCards, remLog] = await Promise.all([
+      gasGet('getCards'),
+      gasGet('getLog')
+    ]);
+
+    // Normalize and store cards
+    cards = remCards.map(c => ({
+      ...c,
+      active: c.active !== false && c.active !== 'FALSE'
+    }));
+
+    // Build log object
+    log = {};
+    remLog.forEach(e => {
+      let month = String(e.month || '');
+      if (month.length > 7) {
+        const d = new Date(month);
+        if (!isNaN(d)) {
+          const bkk = new Date(d.getTime() + 7*60*60*1000);
+          month = `${bkk.getUTCFullYear()}-${String(bkk.getUTCMonth()+1).padStart(2,'0')}`;
+        }
+      }
+      if (!log[month]) log[month] = {};
+      log[month][e.cardId] = {
+        amount: e.amount,
+        paid: e.paid === true || e.paid === 'TRUE',
+        confirmed: e.confirmed === true || e.confirmed === 'TRUE'
+      };
+    });
+
+    pickDefaultMonth();
+
+    setStatus('ok', 'อัปเดตล่าสุด ' + now.toLocaleTimeString('th-TH'));
+    updatePageSub('ข้อมูลจาก Google Sheets · ' + cards.length + ' บัตร');
+    renderDash();
+    if (document.getElementById('pg-log').classList.contains('active')) renderLog();
+    if (document.getElementById('pg-yearly').classList.contains('active')) renderYearly();
+    renderManage();
+    toast('โหลดข้อมูลสำเร็จ ✓', 'ok');
+  } catch(e) {
+    setStatus('err', 'โหลดล้มเหลว');
+    updatePageSub('โหลดไม่สำเร็จ — ตรวจสอบ GAS URL ในตั้งค่า');
+    showErr('desktop-table', 'โหลดข้อมูลไม่สำเร็จ', e.message + ' — ตรวจสอบ GAS URL ในหน้าตั้งค่า');
+    toast('โหลดล้มเหลว: ' + e.message, 'err');
+  }
+}
+
+function showErr(elId, title, msg) {
+  const el = document.getElementById(elId);
+  if (el) el.innerHTML = `<div class="error-box"><h3>${title}</h3><p>${msg}</p></div>`;
+}
+
+// ── Save entry to Sheets immediately ─────────────────────────
+async function saveEntry(cardId, amount, paid, confirmed) {
+  const k = mk();
+  const card = cards.find(c => c.id == cardId);
+  if (!card) return;
+  try {
+    await gasPost({
+      action: 'saveLog',
+      entry: {
+        month: k,
+        cardId: cardId,
+        cardName: card.name,
+        amount: amount,
+        paid: paid,
+        confirmed: !!confirmed
+      }
+    });
+  } catch(e) {
+    toast('บันทึกล้มเหลว: ' + e.message, 'err');
+  }
+}
+
+async function saveCards() {
+  try {
+    await gasPost({ action: 'saveCards', cards });
+  } catch(e) {
+    toast('บันทึกบัตรล้มเหลว: ' + e.message, 'err');
+  }
+}
+
+// ── Navigation ────────────────────────────────────────────────
+const PAGE_TITLES = { dashboard:'แดชบอร์ด', log:'ประวัติรายเดือน', yearly:'ยอดรวมปี', settings:'ตั้งค่า' };
+
+function showPage(p) {
+  document.querySelectorAll('.pg').forEach(el => el.classList.remove('active'));
+  document.getElementById('pg-' + p).classList.add('active');
+  document.querySelectorAll('.nav-btn,.mob-nav-btn').forEach(el => el.classList.toggle('active', el.dataset.page === p));
+  document.getElementById('page-title').textContent = PAGE_TITLES[p] || p;
+  const mobTitle = document.getElementById('mob-title');
+  if (mobTitle) mobTitle.textContent = PAGE_TITLES[p] || p;
+  if (p === 'log') renderLog();
+  if (p === 'yearly') renderYearly();
+  if (p === 'settings') {
+    document.getElementById('cfg-gas').value = cfg.gasUrl || '';
+    document.getElementById('cfg-token').value = cfg.lineToken || '';
+    document.getElementById('cfg-uid').value = cfg.lineUserId || '';
+    document.getElementById('cfg-days').value = cfg.notifyDays || 3;
+    document.getElementById('cfg-notify-hour').value = cfg.notifyHour || 8;
+    document.getElementById('cfg-summary-hour').value = cfg.summaryHour || 9;
+    renderManage();
+  }
+}
+
+function updatePageSub(text) {
+  const el = document.getElementById('page-sub');
+  if (el) el.textContent = text;
+}
+
+// ── Month nav ─────────────────────────────────────────────────
+function buildMonthTabs() {
+  const tabs = document.getElementById('month-tabs');
+  tabs.innerHTML = '';
+  for (let d = -2; d <= 3; d++) {
+    let m = vM + d, y = vY;
+    while (m < 1) { m += 12; y--; }
+    while (m > 12) { m -= 12; y++; }
+    const lbl = new Date(y,m-1,1).toLocaleDateString('th-TH',{month:'short',year:'2-digit'});
+    const btn = document.createElement('button');
+    btn.className = 'month-tab' + (m===vM&&y===vY?' active':'');
+    btn.textContent = lbl;
+    btn.onclick = () => { vY=y; vM=m; renderDash(); };
+    tabs.appendChild(btn);
+  }
+}
+function prevMonth() { vM--; if(vM<1){vM=12;vY--;} renderDash(); }
+function nextMonth() { vM++; if(vM>12){vM=1;vY++;} renderDash(); }
+
+// ── Dashboard ─────────────────────────────────────────────────
+function renderDash() {
+  buildMonthTabs();
+  document.getElementById('table-label').textContent = 'รอบ' + thM(vY,vM);
+  const k = mk(), ml = log[k] || {};
+  const isNow = (vY===CY && vM===CM), td = isNow ? now.getDate() : null;
+  const ac = cards.filter(c => c.active !== false);
+  let tot=0, paidAmt=0, pendAmt=0, paidCnt=0, filledCnt=0;
+  ac.forEach(c => {
+    const e = ml[c.id] || {};
+    const a = parseFloat(e.amount) || 0;
+    tot += a; if(a>0) filledCnt++;
+    if(e.paid) { paidAmt+=a; paidCnt++; } else pendAmt+=a;
+  });
+  document.getElementById('s-count').textContent = ac.length;
+  document.getElementById('s-total').textContent = '฿'+fmt(tot);
+  document.getElementById('s-total-sub').textContent = 'กรอกแล้ว '+filledCnt+' ใบ';
+  document.getElementById('s-paid').textContent = '฿'+fmt(paidAmt);
+  document.getElementById('s-paid-sub').textContent = paidCnt+' ใบ';
+  document.getElementById('s-pending').textContent = '฿'+fmt(pendAmt);
+  document.getElementById('s-pending-sub').textContent = (ac.length-paidCnt)+' ใบ';
+
+  if (!ac.length) {
+    document.getElementById('desktop-table').innerHTML = '<div class="empty-state"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg><p>ยังไม่มีบัตร กด "+ เพิ่มบัตร"</p></div>';
+    document.getElementById('mob-cards').innerHTML = '';
+    return;
+  }
+
+  // Sort
+  const sorted = [...ac].sort((a,b) => {
+    if(sortCol==='name') return sortDir*a.name.localeCompare(b.name,'th');
+    if(sortCol==='cycle') return sortDir*((parseInt(a.cycleDay)||0)-(parseInt(b.cycleDay)||0));
+    if(sortCol==='pay') return sortDir*(getPayDate(a,vM,vY)-getPayDate(b,vM,vY));
+    if(sortCol==='amount') return sortDir*((parseFloat((ml[a.id]||{}).amount)||0)-(parseFloat((ml[b.id]||{}).amount)||0));
+    if(sortCol==='status') return sortDir*(getDiff(a,td,ml)-getDiff(b,td,ml));
+    return 0;
+  });
+
+  renderDesktopTable(sorted, ml, td);
+  renderMobCardList(sorted, ml, td);
+}
+
+function getPayDate(c, tM, tY) {
+  if (!c.payDay) return new Date(tY,tM-1,99);
+  const cy=parseInt(c.cycleDay)||1, py=parseInt(c.payDay);
+  let payM=tM, payY=tY;
+  if (!c.cycleDay||py<=cy) { payM=tM+1; if(payM>12){payM=1;payY=tY+1;} }
+  return new Date(payY,payM-1,py);
+}
+
+function getDiff(c, td, ml) {
+  if ((ml[c.id]||{}).paid) return 9999;
+  if (!c.payDay||!td) return 9998;
+  const cy=parseInt(c.cycleDay)||1, py=parseInt(c.payDay);
+  let payM=vM, payY=vY;
+  if (!c.cycleDay||py<=cy) { payM=vM+1; if(payM>12){payM=1;payY=vY+1;} }
+  return Math.round((new Date(payY,payM-1,py)-new Date(vY,vM-1,td))/(864e5));
+}
+
+function getStatus(c, entry, td, ml) {
+  const paid = !!entry.paid;
+  const amount = parseFloat(entry.amount) || 0;
+  const confirmed = !!entry.confirmed;
+
+  if (paid) return { lbl:'จ่ายแล้ว', cls:'b-paid' };
+
+  if (amount > 0) {
+    if (!c.payDay || !td) return { lbl:'รอจ่าย', cls:'b-na' };
+    const d = getDiff(c, td, ml);
+    if (d<0) return { lbl:'เลยกำหนด', cls:'b-due' };
+    if (d===0) return { lbl:'วันนี้!', cls:'b-due' };
+    if (d<=3) return { lbl:`อีก ${d} วัน`, cls:'b-soon' };
+    return { lbl:`อีก ${d} วัน`, cls:'b-ok' };
+  }
+
+  if (confirmed) return { lbl:'ไม่มียอด', cls:'b-na' };
+  return { lbl:'ยังไม่กรอก', cls:'b-unfilled' };
+}
+
+function getNextMonthTag(c) {
+  if (!c.payDay) return '';
+  const cy=parseInt(c.cycleDay)||1, py=parseInt(c.payDay);
+  if (!c.cycleDay||py<=cy) {
+    let payM=vM+1; if(payM>12)payM=1;
+    return `<span class="next-month-tag">จ่าย ${THAI_SHORT[payM-1]}</span>`;
+  }
+  return '';
+}
+
+function doSort(col) {
+  if (sortCol===col) sortDir*=-1;
+  else { sortCol=col; sortDir=1; }
+  renderDash();
+}
+
+function si(col) {
+  const on = sortCol===col;
+  return `<span onclick="doSort('${col}')" style="cursor:pointer;margin-left:4px;font-size:10px;color:${on?'var(--gold)':'var(--text3)'}">${on?(sortDir===1?'↑':'↓'):'↕'}</span>`;
+}
+
+function renderDesktopTable(sorted, ml, td) {
+  let h = `<table><thead><tr>
+    <th style="width:36px">#</th>
+    <th>บัตร${si('name')}</th>
+    <th style="width:72px">สรุปรอบ${si('cycle')}</th>
+    <th style="width:100px">วันจ่าย${si('pay')}</th>
+    <th style="width:136px;text-align:right">ยอด (฿)${si('amount')}</th>
+    <th style="width:108px">สถานะ${si('status')}</th>
+    <th style="width:120px"></th>
+  </tr></thead><tbody>`;
+
+  sorted.forEach((c,i) => {
+    const e=ml[c.id]||{}, a=parseFloat(e.amount)||0, paid=!!e.paid;
+    const st=getStatus(c,e,td,ml);
+    h+=`<tr class="${paid?'paid-row':''}">
+      <td style="color:var(--text3);font-family:var(--mono);font-size:11px">${i+1}</td>
+      <td><span class="card-name">${c.name}</span></td>
+      <td><span class="day-chip ${c.cycleDay?'':'empty'}">${c.cycleDay||'—'}</span></td>
+      <td><span class="day-chip ${c.payDay?'':'empty'}">${c.payDay||'—'}</span>${getNextMonthTag(c)}</td>
+      <td style="text-align:right"><div class="amt-wrap"><span class="amt-prefix">฿</span><input class="amt-input" type="number" value="${a||''}" placeholder="0" min="0" step="100" onchange="onAmtChange(${c.id},this.value)" onfocus="this.select()"></div></td>
+      <td><span class="badge ${st.cls}"><span class="bdot"></span>${st.lbl}</span></td>
+      <td><div class="row-acts">
+        ${(!paid && a<=0) ? `<button class="pay-btn ${e.confirmed?'noamt-done':''}" onclick="onConfirmNoAmount(${c.id})" title="ยืนยันว่ารอบนี้ไม่มียอดใช้จ่าย">${e.confirmed?'✓ ไม่มียอด':'ไม่มียอด'}</button>` : ''}
+        <button class="pay-btn ${paid?'done':''}" onclick="onPaidToggle(${c.id})">${paid?'✓ จ่ายแล้ว':'จ่ายแล้ว'}</button>
+        <button class="icon-btn" onclick="openAdd(${c.id})" title="แก้ไข"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+        <button class="icon-btn del" onclick="deleteCard(${c.id})" title="ลบ"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
+      </div></td>
+    </tr>`;
+  });
+
+  const total = sorted.reduce((s,c) => s+(parseFloat((ml[c.id]||{}).amount)||0), 0);
+  h += `<tr class="total-row"><td colspan="4" style="text-align:right;font-size:10px;color:var(--text3);letter-spacing:.5px;text-transform:uppercase">รวม</td><td style="text-align:right;color:var(--gold);font-family:var(--mono)">฿${fmt(total)}</td><td colspan="2"></td></tr>`;
+  document.getElementById('desktop-table').innerHTML = h + '</tbody></table>';
+}
+
+function renderMobCardList(sorted, ml, td) {
+  const el = document.getElementById('mob-cards');
+  el.innerHTML = sorted.map(c => {
+    const e=ml[c.id]||{}, a=parseFloat(e.amount)||0, paid=!!e.paid;
+    const st=getStatus(c,e,td,ml);
+    return `<div class="mob-card-item">
+      <div class="mob-card-top"><span class="mob-card-name">${c.name}</span><span class="badge ${st.cls}"><span class="bdot"></span>${st.lbl}</span></div>
+      <div class="mob-card-chips">
+        <span class="day-chip ${c.cycleDay?'':'empty'}">รอบ ${c.cycleDay||'—'}</span>
+        <span class="day-chip ${c.payDay?'':'empty'}">จ่าย ${c.payDay||'—'}</span>
+        ${getNextMonthTag(c)}
+      </div>
+      <div class="mob-card-bottom">
+        <input type="number" class="mob-amt" value="${a||''}" placeholder="฿ กรอกยอด" min="0" step="100" onchange="onAmtChange(${c.id},this.value)" onfocus="this.select()">
+        ${(!paid && a<=0) ? `<button class="mob-pay-btn ${e.confirmed?'noamt-done':''}" onclick="onConfirmNoAmount(${c.id})">${e.confirmed?'✓ ไม่มียอด':'ไม่มียอด'}</button>` : ''}
+        <button class="mob-pay-btn ${paid?'done':''}" onclick="onPaidToggle(${c.id})">${paid?'✓ จ่ายแล้ว':'จ่ายแล้ว'}</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Amount / Paid handlers ────────────────────────────────────
+async function onAmtChange(cid, val) {
+  const k = mk();
+  if (!log[k]) log[k] = {};
+  if (!log[k][cid]) log[k][cid] = { amount:0, paid:false, confirmed:false };
+  const a = parseFloat(val) || 0;
+  log[k][cid].amount = a;
+  log[k][cid].confirmed = false; // กรอกยอดจริงแล้ว ไม่ใช่สถานะ "ยืนยันไม่มียอด" อีกต่อไป
+  renderDash();
+  await saveEntry(cid, a, !!log[k][cid].paid, false);
+}
+
+async function onPaidToggle(cid) {
+  const k = mk();
+  if (!log[k]) log[k] = {};
+  if (!log[k][cid]) log[k][cid] = { amount:0, paid:false, confirmed:false };
+  log[k][cid].paid = !log[k][cid].paid;
+  renderDash();
+  await saveEntry(cid, log[k][cid].amount, log[k][cid].paid, log[k][cid].confirmed);
+}
+
+async function onConfirmNoAmount(cid) {
+  const k = mk();
+  if (!log[k]) log[k] = {};
+  const cur = log[k][cid] || { amount:0, paid:false, confirmed:false };
+  cur.amount = 0;
+  cur.confirmed = !cur.confirmed; // toggle: กดซ้ำเพื่อยกเลิกยืนยันได้
+  log[k][cid] = cur;
+  renderDash();
+  await saveEntry(cid, 0, !!cur.paid, cur.confirmed);
+  toast(cur.confirmed ? 'ยืนยันแล้ว: ไม่มียอดรอบนี้ ✓' : 'ยกเลิกการยืนยันแล้ว', 'ok');
+}
+
+// ── Card CRUD ─────────────────────────────────────────────────
+function openAdd(id) {
+  editId = id || null;
+  const c = id ? cards.find(x=>x.id==id) : null;
+  document.getElementById('modal-title').textContent = c ? 'แก้ไขบัตร' : 'เพิ่มบัตรใหม่';
+  document.getElementById('m-name').value = c ? c.name : '';
+  document.getElementById('m-cycle').value = c ? c.cycleDay : '';
+  document.getElementById('m-pay').value = c ? c.payDay : '';
+  document.getElementById('overlay').classList.add('show');
+  setTimeout(() => document.getElementById('m-name').focus(), 100);
+}
+function closeModal() { document.getElementById('overlay').classList.remove('show'); editId=null; }
+function onOverlayClick(e) { if(e.target===document.getElementById('overlay')) closeModal(); }
+
+async function saveCard() {
+  const name = document.getElementById('m-name').value.trim();
+  if (!name) { document.getElementById('m-name').style.borderColor='var(--red)'; return; }
+  document.getElementById('m-name').style.borderColor = '';
+  const cycleDay = document.getElementById('m-cycle').value.trim();
+  const payDay = document.getElementById('m-pay').value.trim();
+  if (editId) {
+    const c = cards.find(x=>x.id==editId);
+    if (c) Object.assign(c, {name,cycleDay,payDay});
+  } else {
+    cards.push({id:Date.now(),name,cycleDay,payDay,active:true});
+  }
+  closeModal();
+  renderDash();
+  renderManage();
+  toast(editId ? 'แก้ไขบัตรแล้ว ✓' : 'เพิ่มบัตรแล้ว ✓', 'ok');
+  await saveCards();
+}
+
+async function deleteCard(id) {
+  if (!confirm('ลบบัตรนี้?')) return;
+  cards = cards.filter(c=>c.id!=id);
+  renderDash();
+  renderManage();
+  await saveCards();
+}
+
+function renderManage() {
+  const el = document.getElementById('manage-cards');
+  if (!el) return;
+  el.innerHTML = cards.map(c => `<div class="card-manage-item">
+    <div><div class="cmi-name">${c.name}</div><div class="cmi-meta">รอบ${c.cycleDay||'—'} / จ่าย${c.payDay||'—'}</div></div>
+    <div class="cmi-actions">
+      <button class="btn btn-sm" onclick="openAdd(${c.id})">แก้ไข</button>
+      <button class="btn btn-sm" style="color:var(--red-l)" onclick="deleteCard(${c.id})">ลบ</button>
+    </div>
+  </div>`).join('');
+}
+
+// ── Log (พร้อมเปรียบเทียบยอดใช้จ่าย เดือนนี้ vs เดือนก่อนหน้า) ──
+// เกณฑ์: ต่างกันไม่เกิน 1% ถือว่า "เท่าเดิม" กันเคส floating point / ปัดเศษ
+function monthTotal(k) {
+  return cards.filter(c=>c.active!==false).reduce((s,c) => {
+    const e = (log[k]||{})[c.id];
+    return s + (e ? parseFloat(e.amount)||0 : 0);
+  }, 0);
+}
+
+function prevMonthKey(k) {
+  const [y,m] = k.split('-').map(Number);
+  let py=y, pm=m-1;
+  if (pm<1) { pm=12; py--; }
+  return `${py}-${String(pm).padStart(2,'0')}`;
+}
+
+function getMonthCompareBadge(k) {
+  const pk = prevMonthKey(k);
+  const prevExists = !!log[pk] && Object.values(log[pk]).some(e => parseFloat(e.amount) > 0);
+  if (!prevExists) return ''; // ไม่มีเดือนก่อนหน้าให้เทียบ
+
+  const cur = monthTotal(k), prev = monthTotal(pk);
+  if (prev <= 0) return '';
+
+  const diff = cur - prev;
+  const pct  = Math.abs(diff) / prev * 100;
+
+  if (pct < 1) {
+    return `<span class="log-compare lc-same" title="เทียบกับเดือนก่อนหน้า">➖ เท่าเดิม</span>`;
+  }
+  if (diff > 0) {
+    return `<span class="log-compare lc-up" title="เทียบกับเดือนก่อนหน้า">▲ เพิ่มขึ้น ${pct.toFixed(0)}%</span>`;
+  }
+  return `<span class="log-compare lc-down" title="เทียบกับเดือนก่อนหน้า">▼ ลดลง ${pct.toFixed(0)}%</span>`;
+}
+
+// เปรียบเทียบยอดของ "บัตรใบเดียวกัน" ระหว่างเดือนนี้กับเดือนก่อนหน้า
+// ใช้เกณฑ์เดียวกับระดับเดือน: ต่างกันไม่เกิน 1% ถือว่าเท่าเดิม
+function getCardCompareBadge(k, cardId) {
+  const pk = prevMonthKey(k);
+  const prevEntry = (log[pk]||{})[cardId];
+  const prevAmt = prevEntry ? parseFloat(prevEntry.amount)||0 : 0;
+
+  if (prevAmt <= 0) {
+    // ไม่มีข้อมูลเดือนก่อนของบัตรนี้ (บัตรใหม่ หรือเดือนก่อนไม่มียอด)
+    return `<span class="log-card-compare lcc-new" title="ไม่มีข้อมูลเดือนก่อนของบัตรนี้">✦ ใหม่</span>`;
+  }
+
+  const curEntry = (log[k]||{})[cardId];
+  const curAmt = curEntry ? parseFloat(curEntry.amount)||0 : 0;
+  const diff = curAmt - prevAmt;
+  const pct = Math.abs(diff) / prevAmt * 100;
+
+  if (pct < 1) {
+    return `<span class="log-card-compare lcc-same" title="เท่ากับเดือนก่อนหน้า (฿${fmt(prevAmt)})">➖</span>`;
+  }
+  if (diff > 0) {
+    return `<span class="log-card-compare lcc-up" title="เดือนก่อนหน้า ฿${fmt(prevAmt)}">▲${pct.toFixed(0)}%</span>`;
+  }
+  return `<span class="log-card-compare lcc-down" title="เดือนก่อนหน้า ฿${fmt(prevAmt)}">▼${pct.toFixed(0)}%</span>`;
+}
+
+function renderLog() {
+  const months = Object.keys(log).sort().reverse();
+  if (!months.length) {
+    document.getElementById('log-content').innerHTML = '<div class="empty-state" style="padding:48px"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><p>ยังไม่มีข้อมูล</p></div>';
+    return;
+  }
+  let h = '<div class="log-grid">';
+  months.forEach(k => {
+    const [y,m] = k.split('-');
+    const lbl = new Date(+y,+m-1,1).toLocaleDateString('th-TH',{month:'long',year:'numeric'});
+    let tot=0, rows='';
+    cards.filter(c=>c.active!==false).forEach(c => {
+      const e=(log[k]||{})[c.id]; if(!e||!e.amount) return;
+      const a=parseFloat(e.amount)||0; tot+=a;
+      const cardBadge = getCardCompareBadge(k, c.id);
+      rows+=`<div class="log-row"><span>${e.paid?'<span style="color:var(--green-l);margin-right:4px">✓</span>':''}${c.name}</span><div class="log-amt-wrap">${cardBadge}<span class="log-amt ${e.paid?'paid':'unpaid'}">฿${fmt(a)}</span></div></div>`;
+    });
+    if(!rows) rows='<div class="log-row" style="justify-content:center;color:var(--text3);font-size:12px">ไม่มียอดกรอก</div>';
+    const compareBadge = getMonthCompareBadge(k);
+    h+=`<div class="log-card"><div class="log-head"><span class="log-month">${lbl}</span><div class="log-head-right"><span class="log-total">฿${fmt(tot)}</span>${compareBadge}</div></div><div>${rows}</div></div>`;
+  });
+  document.getElementById('log-content').innerHTML = h + '</div>';
+}
+
+// ── Yearly ────────────────────────────────────────────────────
+function renderYearly() {
+  const years=[...new Set(Object.keys(log).map(k=>k.slice(0,4)).filter(y=>/^\d{4}$/.test(y)))].sort().reverse();
+  const sel=document.getElementById('yr-select');
+  const curSel=sel.value||String(CY);
+  sel.innerHTML=years.map(y=>`<option value="${y}" ${y===curSel?'selected':''}>${y}</option>`).join('');
+  const yr=sel.value||String(CY);
+  const monthTotals=Array(12).fill(0);
+  for(let m=1;m<=12;m++){
+    const k=`${yr}-${String(m).padStart(2,'0')}`;
+    monthTotals[m-1]=Object.values(log[k]||{}).reduce((s,e)=>s+(parseFloat(e.amount)||0),0);
+  }
+  const total=monthTotals.reduce((s,v)=>s+v,0);
+  const nonZero=monthTotals.filter(v=>v>0);
+  const avg=nonZero.length?total/nonZero.length:0;
+  const maxVal=Math.max(...monthTotals,0);
+  const minVal=nonZero.length?Math.min(...nonZero):0;
+  document.getElementById('yr-total').textContent='฿'+fmt(Math.round(total));
+  document.getElementById('yr-avg').textContent='เฉลี่ย ฿'+fmt(Math.round(avg))+'/เดือน';
+  document.getElementById('yr-max').textContent='฿'+fmt(maxVal);
+  document.getElementById('yr-max-mon').textContent=maxVal>0?THAI_SHORT[monthTotals.indexOf(maxVal)]:'—';
+  document.getElementById('yr-min').textContent=minVal>0?'฿'+fmt(minVal):'฿0';
+  document.getElementById('yr-min-mon').textContent=minVal>0?THAI_SHORT[monthTotals.indexOf(minVal)]:'—';
+
+  const BAR_H=150;
+  let bars='<div class="bar-chart">';
+  monthTotals.forEach((v,i)=>{
+    const h=maxVal>0?Math.round((v/maxVal)*BAR_H):0;
+    const isNow=(i===CM-1&&parseInt(yr)===CY);
+    const color=isNow?'var(--green)':'var(--gold)';
+    bars+=`<div class="bar-col"><div class="bar-tooltip">${v>0?'฿'+fmt(Math.round(v)):''}</div><div class="bar-fill" style="height:${h}px;background:${color};opacity:${v>0?.85:.2}"></div><div class="bar-label">${THAI_SHORT[i]}</div></div>`;
+  });
+  document.getElementById('yr-chart').innerHTML=bars+'</div>';
+
+  const cardTotals=[];
+  cards.filter(c=>c.active!==false).forEach(c=>{
+    let tot=0;
+    for(let m=1;m<=12;m++){
+      tot+=parseFloat(((log[`${yr}-${String(m).padStart(2,'0')}`]||{})[c.id]||{}).amount)||0;
+    }
+    if(tot>0)cardTotals.push({name:c.name,tot});
+  });
+  cardTotals.sort((a,b)=>b.tot-a.tot);
+  const maxC=cardTotals[0]?.tot||1;
+  document.getElementById('yr-cards').innerHTML=cardTotals.length
+    ?cardTotals.map(c=>`<div class="yr-card-row"><span class="yr-card-name">${c.name}</span><div class="yr-bar-wrap"><div class="yr-bar-fill" style="width:${Math.round(c.tot/maxC*100)}%"></div></div><span class="yr-card-amt">฿${fmt(Math.round(c.tot))}</span></div>`).join('')
+    :'<div class="empty-state" style="padding:32px"><p>ไม่มีข้อมูลปีนี้</p></div>';
+}
+
+// ── Settings ──────────────────────────────────────────────────
+function saveGas(){
+  cfg.gasUrl=document.getElementById('cfg-gas').value.trim()||DEFAULT_GAS;
+  saveCfg();showMsg('gas-msg','บันทึกแล้ว','ok');toast('บันทึก GAS URL ✓','ok');
+}
+async function testGas(){
+  cfg.gasUrl=document.getElementById('cfg-gas').value.trim()||DEFAULT_GAS;
+  showMsg('gas-msg','กำลังทดสอบ...','info');
+  try{const r=await gasGet('getCards');showMsg('gas-msg',`เชื่อมต่อสำเร็จ ✓ พบ ${r.length} บัตร`,'ok');}
+  catch(e){showMsg('gas-msg','ล้มเหลว: '+e.message,'err');}
+}
+function saveLine(){
+  cfg.lineToken=document.getElementById('cfg-token').value.trim();
+  cfg.lineUserId=document.getElementById('cfg-uid').value.trim();
+  cfg.notifyDays=parseInt(document.getElementById('cfg-days').value)||3;
+  cfg.notifyHour=parseInt(document.getElementById('cfg-notify-hour').value)||8;
+  cfg.summaryHour=parseInt(document.getElementById('cfg-summary-hour').value)||9;
+  saveCfg();showMsg('line-msg','บันทึกแล้ว','ok');toast('บันทึก LINE ✓','ok');
+}
+// ✅ แก้ไข v3.2: เปลี่ยนจากเรียก checkNotify (cron job ที่อาจไม่ส่งอะไรเลย
+//    ถ้าไม่มีบัตรเข้าเงื่อนไข แต่ก็ยังโชว์ "สำเร็จ") → เรียก testLineMessage
+//    ซึ่งยิงข้อความทดสอบแบบ force เสมอ ทำให้ผลลัพธ์ตรงกับที่ผู้ใช้เห็นจริงใน LINE
+async function testLine(){
+  const tk=cfg.lineToken||document.getElementById('cfg-token')?.value?.trim();
+  const uid=cfg.lineUserId||document.getElementById('cfg-uid')?.value?.trim();
+  if(!tk){toast('ยังไม่ได้ใส่ token','err');return;}
+  if(!uid){toast('ยังไม่ได้ใส่ User ID','err');return;}
+  showMsg('line-msg','กำลังส่ง...','info');
+  try{
+    await gasPost({action:'saveConfig',config:{lineToken:tk,lineUserId:uid,notifyDaysBefore:cfg.notifyDays}});
+    const r=await gasGet('testLineMessage');
+    if(r.error){showMsg('line-msg','ผิดพลาด: '+r.error,'err');toast('ส่งไม่สำเร็จ: '+r.error,'err');return;}
+    if(!r.sent){showMsg('line-msg','ส่งไม่สำเร็จ — เช็ค token/userId ให้ถูกต้อง','err');toast('ส่งไม่สำเร็จ','err');return;}
+    showMsg('line-msg','ส่งข้อความทดสอบสำเร็จ ✓ เช็ค LINE ได้เลย','ok');
+    toast('ส่ง LINE สำเร็จ ✓','ok');
+  }catch(e){showMsg('line-msg','ล้มเหลว: '+e.message,'err');toast('ล้มเหลว: '+e.message,'err');}
+}
+async function updateTriggers(){
+  cfg.notifyHour=parseInt(document.getElementById('cfg-notify-hour').value)||8;
+  cfg.summaryHour=parseInt(document.getElementById('cfg-summary-hour').value)||9;
+  saveCfg();
+  try{
+    await gasPost({action:'saveConfig',config:{lineToken:cfg.lineToken,lineUserId:cfg.lineUserId,notifyDaysBefore:cfg.notifyDays,notifyHour:cfg.notifyHour,summaryHour:cfg.summaryHour}});
+    const r=await gasGet('installTriggers');
+    showMsg('line-msg',`Trigger อัปเดตแล้ว: แจ้งเตือน ${cfg.notifyHour}:00 / สรุป ${cfg.summaryHour}:00 ✓`,'ok');
+    toast('อัปเดต Trigger สำเร็จ ✓','ok');
+  }catch(e){showMsg('line-msg','ล้มเหลว: '+e.message,'err');}
+}
+async function sendMonthlySummaryNow(){
+  showMsg('line-msg','กำลังส่งสรุปรายเดือน...','info');
+  try{
+    await gasPost({action:'saveConfig',config:{lineToken:cfg.lineToken,lineUserId:cfg.lineUserId}});
+    const r=await gasGet('monthlySummary');
+    showMsg('line-msg',r.sent?`ส่งสรุปสำเร็จ ✓ ${r.cardCount} บัตร`:'ส่งไม่สำเร็จ','ok');
+    toast('ส่งสรุปรายเดือน ✓','ok');
+  }catch(e){showMsg('line-msg','ล้มเหลว: '+e.message,'err');}
+}
+
+// ── UI Helpers ────────────────────────────────────────────────
+function setStatus(s,t){
+  const d=document.getElementById('status-dot');
+  d.className='status-dot'+(s==='ok'?' ok':s==='loading'?' loading':s==='err'?' err':'');
+  document.getElementById('status-text').textContent=t;
+}
+function showMsg(id,msg,type){
+  const el=document.getElementById(id);
+  el.className='status-msg sm-'+type;el.textContent=msg;el.style.display='block';
+  setTimeout(()=>el.style.display='none',5000);
+}
+function toast(msg,type='info'){
+  const w=document.getElementById('toasts');
+  const t=document.createElement('div');t.className='toast '+type;t.textContent=msg;w.appendChild(t);
+  setTimeout(()=>t.remove(),3500);
+}
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape')closeModal();
+  if(e.key==='Enter'&&document.getElementById('overlay').classList.contains('show'))saveCard();
+});
+
+// ── Init ──────────────────────────────────────────────────────
+loadCfg();
+loadData();
+</script>
+</body>
+</html>
