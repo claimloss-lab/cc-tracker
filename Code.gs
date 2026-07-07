@@ -1,7 +1,13 @@
 // ============================================================
-//  CC Tracker — Google Apps Script (Code.gs)  v3.3
+//  CC Tracker — Google Apps Script (Code.gs)  v3.5
 //  LINE Messaging API version
 //  Deploy as: Web App (Execute as Me, Anyone can access)
+//
+//  New in v3.5:
+//  - checkAndNotify() ส่งเป็น Flex Message (การ์ด) แทน text ธรรมดา
+//    เพิ่มฟังก์ชัน sendLineFlex() + buildNotifyFlex()
+//  - (ถ้าอยากมีปุ่ม "เปิดแอป" ในการ์ด ให้เพิ่ม key "appUrl" ใน Config sheet
+//    เป็น URL ของ dashboard — ถ้าไม่ตั้งไว้ การ์ดจะไม่มีปุ่มนี้)
 //
 //  Fixed in v3.3:
 //  - confirmed flag ("ไม่มียอด") ตอนนี้ persist ลง Sheet จริง
@@ -448,6 +454,25 @@ function sendLineMessage(token, userId, message) {
   return code === 200;
 }
 
+// ✅ ใหม่ v3.5: ส่ง Flex Message (การ์ด) แทนข้อความ text ธรรมดา
+// altText คือข้อความที่โชว์ในหน้า notification/list ของ LINE (ต้อง <= 400 ตัวอักษร)
+// contents คือ Flex bubble object (ดู buildNotifyFlex ด้านล่าง)
+function sendLineFlex(token, userId, altText, contents) {
+  if (!token || !userId) { Logger.log('sendLineFlex: missing token or userId'); return false; }
+  const res = UrlFetchApp.fetch('https://api.line.me/v2/bot/message/push', {
+    method: 'post',
+    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+    payload: JSON.stringify({
+      to: userId,
+      messages: [{ type: 'flex', altText: String(altText).slice(0, 400), contents }]
+    }),
+    muteHttpExceptions: true
+  });
+  const code = res.getResponseCode();
+  if (code !== 200) Logger.log('LINE flex push error ' + code + ': ' + res.getContentText());
+  return code === 200;
+}
+
 // ✅ ใหม่ v3.3: ยิงข้อความทดสอบแบบ force เสมอ ไม่สนเงื่อนไขบัตร/วันครบกำหนดใดๆ
 // ใช้กับปุ่ม "ทดสอบส่ง LINE" ใน dashboard โดยเฉพาะ — แยกจาก checkAndNotify()
 // ซึ่งเป็น cron job ที่จะเงียบ (ไม่ส่งอะไรเลย) ถ้าไม่มีบัตรเข้าเงื่อนไข
@@ -622,6 +647,87 @@ function saveConfig(config) {
   }
 }
 
+// ── Flex Message Builder (daily notify) ────────────────────────
+// สร้าง Flex bubble การ์ดเดียว รวม 3 ส่วน: ยังไม่จ่าย / จ่ายแล้ว / วันนี้สรุปยอด
+// สีของแต่ละบัตรใน "ยังไม่จ่าย" ไล่ตามความเร่งด่วน: แดง(วันนี้)/ส้ม(พรุ่งนี้)/เหลือง(ยังมีเวลา)
+function buildNotifyFlex(bkk, notYetPaid, alreadyPaid, cycleToday) {
+  const urgentCount = notYetPaid.filter(u => u.diff <= 1).length;
+  const body = [];
+
+  if (notYetPaid.length > 0) {
+    body.push({
+      type: 'text',
+      text: urgentCount > 0 ? `🔔 ยังไม่จ่าย (ด่วน ${urgentCount} บัตร!)` : '🔔 ยังไม่จ่าย',
+      weight: 'bold', size: 'sm', color: urgentCount > 0 ? '#DC2626' : '#374151'
+    });
+    body.push({ type: 'separator', margin: 'sm' });
+
+    notYetPaid.forEach((u, i) => {
+      const color    = u.diff === 0 ? '#DC2626' : u.diff === 1 ? '#EA580C' : '#CA8A04';
+      const dayLabel = u.diff === 0 ? 'วันนี้เลย!' : u.diff === 1 ? `พรุ่งนี้ (วันที่ ${u.payDay})` : `อีก ${u.diff} วัน (วันที่ ${u.payDay})`;
+      body.push({
+        type: 'box', layout: 'vertical', margin: i === 0 ? 'md' : 'lg', spacing: 'xs',
+        contents: [
+          { type: 'box', layout: 'horizontal', contents: [
+            { type: 'text', text: u.name, weight: 'bold', size: 'md', color: '#111827', flex: 3, wrap: true },
+            { type: 'text', text: '฿' + fmt(u.amount), weight: 'bold', size: 'md', color: color, align: 'end', flex: 2 }
+          ]},
+          { type: 'text', text: '⏰ ' + dayLabel, size: 'xs', color: color }
+        ]
+      });
+    });
+  }
+
+  if (alreadyPaid.length > 0) {
+    body.push({ type: 'separator', margin: 'lg' });
+    body.push({ type: 'text', text: '✅ จ่ายแล้ว', weight: 'bold', size: 'sm', color: '#059669', margin: 'lg' });
+    alreadyPaid.forEach(u => {
+      body.push({
+        type: 'box', layout: 'horizontal', margin: 'sm',
+        contents: [
+          { type: 'text', text: u.name, size: 'sm', color: '#374151', flex: 3, wrap: true },
+          { type: 'text', text: u.amount > 0 ? '฿' + fmt(u.amount) : '-', size: 'sm', color: '#059669', align: 'end', flex: 2 }
+        ]
+      });
+    });
+  }
+
+  if (cycleToday.length > 0) {
+    body.push({ type: 'separator', margin: 'lg' });
+    body.push({ type: 'text', text: '🗓️ วันนี้สรุปยอด', weight: 'bold', size: 'sm', color: '#7C3AED', margin: 'lg' });
+    cycleToday.forEach(c => {
+      body.push({ type: 'text', text: '📋 ' + c.name, size: 'sm', color: '#374151', margin: 'sm', wrap: true });
+    });
+    body.push({ type: 'text', text: '💡 อย่าลืมกรอกยอดในแอป!', size: 'xs', color: '#9CA3AF', margin: 'md', wrap: true });
+  }
+
+  const bubble = {
+    type: 'bubble',
+    size: 'giga',
+    header: {
+      type: 'box', layout: 'vertical', backgroundColor: '#111827', paddingAll: '20px', spacing: 'xs',
+      contents: [
+        { type: 'text', text: '💳 CC Tracker', color: '#FFFFFF', weight: 'bold', size: 'lg' },
+        { type: 'text', text: '📅 ' + bkk.dateStr, color: '#9CA3AF', size: 'sm' }
+      ]
+    },
+    body: { type: 'box', layout: 'vertical', paddingAll: '20px', spacing: 'sm', contents: body }
+  };
+
+  const cfg = getConfig();
+  if (cfg['appUrl']) {
+    bubble.footer = {
+      type: 'box', layout: 'vertical', paddingAll: '12px',
+      contents: [{
+        type: 'button', style: 'primary', color: '#111827', height: 'sm',
+        action: { type: 'uri', label: 'เปิดแอป', uri: cfg['appUrl'] }
+      }]
+    };
+  }
+
+  return bubble;
+}
+
 // ── Auto Notify ───────────────────────────────────────────────
 
 function checkAndNotify() {
@@ -670,29 +776,14 @@ function checkAndNotify() {
 
   notYetPaid.sort((a, b) => a.diff - b.diff);
 
-  let msg = `💳 CC Tracker\n📅 ${bkk.dateStr}\n`;
+  // ✅ v3.5: ส่งเป็น Flex Message (การ์ด) แทน text ธรรมดา
+  const urgentCount = notYetPaid.filter(u => u.diff <= 1).length;
+  const altText = notYetPaid.length > 0
+    ? `🔔 มี ${notYetPaid.length} บัตรใกล้ครบกำหนด${urgentCount > 0 ? ' (ด่วน ' + urgentCount + ' บัตร!)' : ''}`
+    : (cycleToday.length > 0 ? `🗓️ วันนี้สรุปยอด ${cycleToday.length} บัตร` : '💳 CC Tracker อัปเดตวันนี้');
 
-  if (notYetPaid.length > 0) {
-    const urgentCount = notYetPaid.filter(u => u.diff <= 1).length;
-    if (urgentCount > 0) msg += `\n⚡ มี ${urgentCount} บัตรด่วน!`;
-    msg += '\n\n🔔 ยังไม่จ่าย:\n';
-    msg += notYetPaid.map(u => {
-      const urgency  = u.diff === 0 ? '🔴' : u.diff === 1 ? '🟠' : '🟡';
-      const dayLabel = u.diff === 0 ? 'วันนี้เลย!' : u.diff === 1 ? `พรุ่งนี้ (${u.payDay})` : `อีก ${u.diff} วัน (${u.payDay})`;
-      return `${urgency} ${u.name}\n  ⏰ ${dayLabel}\n  💵 ฿${fmt(u.amount)}`;
-    }).join('\n\n');
-  }
-  if (alreadyPaid.length > 0) {
-    msg += '\n\n✅ จ่ายแล้ว:\n';
-    msg += alreadyPaid.map(u => `✅ ${u.name}${u.amount > 0 ? ' ฿'+fmt(u.amount) : ''}`).join('\n');
-  }
-  if (cycleToday.length > 0) {
-    msg += `\n\n🗓️ วันนี้สรุปยอด ${cycleToday.length} บัตร:\n`;
-    msg += cycleToday.map(c => `📋 ${c.name}`).join('\n');
-    msg += '\n💡 อย่าลืมกรอกยอดในแอป!';
-  }
-
-  const sent = sendLineMessage(token, userId, msg);
+  const flex = buildNotifyFlex(bkk, notYetPaid, alreadyPaid, cycleToday);
+  const sent = sendLineFlex(token, userId, altText, flex);
   return { notified: notYetPaid.length + cycleToday.length, sent };
 }
 
